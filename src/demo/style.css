@@ -1,0 +1,33 @@
+:root {
+  --cream: rgba(241, 230, 203, 0.9);
+  --cream-solid: #f1e6cb;
+  --ink: #4a3426;
+  --ink-soft: #7a604c;
+  --rust: #d4643a;
+  --teal: #3f8f98;
+  --gold: #d1a64c;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1a6ead; font-family: 'Nunito', system-ui, sans-serif; color: var(--ink); }
+#app { position: fixed; inset: 0; }
+#app canvas { display: block; cursor: grab; }
+#app canvas:active { cursor: grabbing; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; user-select: none; }
+.panel { background: var(--cream); border: 2px solid rgba(74, 52, 38, 0.25); border-radius: 14px; padding: 8px 14px; box-shadow: 0 4px 0 rgba(74, 52, 38, 0.18); }
+
+.stats { position: absolute; top: 12px; left: 12px; display: grid; gap: 2px; font-size: 14px; }
+.stats b { color: var(--rust); font-variant-numeric: tabular-nums; }
+
+.help { position: absolute; bottom: 14px; right: 12px; font-size: 12px; line-height: 1.6; }
+.help kbd { background: rgba(74, 52, 38, 0.12); border-radius: 4px; padding: 0 5px; font-family: inherit; font-weight: 700; }
+
+.splash { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(rgba(26, 110, 173, 0.15), rgba(26, 110, 173, 0.35)); transition: opacity 1.2s; pointer-events: auto; cursor: pointer; }
+.splash.hide { opacity: 0; pointer-events: none; }
+.splash .card { text-align: center; color: #fff; text-shadow: 0 2px 12px rgba(20, 60, 100, 0.5); }
+.splash h1 { margin: 0; font-size: clamp(42px, 9vw, 88px); letter-spacing: 0.04em; }
+.splash p { margin: 6px 0 0; font-size: 16px; font-weight: 700; }
+
+@media (max-width: 640px) {
+  .help { display: none; }
+}
