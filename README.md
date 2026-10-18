@@ -158,6 +158,12 @@ Thứ tự render: mây volumetric (nửa độ phân giải) → scene → ghé
 
 Debug: khi chạy `npm run dev`, gõ `game` trong console. Ví dụ `game.world.env.time = 0.53` để xem hoàng hôn.
 
+## Giấy phép
+
+- Code Skybase: **MIT** (xem `LICENSE`).
+- Add-on Blender trong `tools/blender/`: **GPL-3.0-or-later** (bắt buộc với add-on dùng API của Blender).
+- Mã bên thứ ba và văn bản giấy phép gốc: `THIRD_PARTY_LICENSES.md`.
+
 ## Ghi công
 
 - Mây volumetric dựa theo [leoawen/volumetric_cloud_atmosphere_scattering](https://github.com/leoawen/volumetric_cloud_atmosphere_scattering) (MIT).
