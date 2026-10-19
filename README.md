@@ -67,10 +67,11 @@ frame();
 
 **Demo:**
 - Bắt đầu bằng nhân vật đứng trên cầu cảng. Lại gần tàu bấm **F** để lên boong; trên boong bấm F để nhảy khỏi tàu.
+- **Chạm nước:** tàu hạ được xuống nổi trên mặt biển (lái tay giữ Shift, hoặc độ cao 0 khi tự lái). Khi chạm nước có vệt sóng chữ V, bọt sau đuôi, tia nước ở mũi, gợn tròn khi đứng yên và sóng loang khi đáp xuống.
 - **Tàu bay** dài ~43 m, 2 tầng: trên boong có buồng lái và bếp; cầu thang bên phải xuống khoang hàng và kho. Phòng có cửa ra vào và cửa sổ. Vào trong thì camera nhìn từ trên xuống, mái (hoặc cả boong) được cắt đi.
 - **Bánh lái** (bấm E):
   - Lái tay: góc 3 hoặc góc 1, bấm E để rời bánh lái.
-  - Tự lái: chọn đảo để tới, tàu tự giữ độ cao và lượn quanh khi tới nơi.
+  - Tự lái: chọn đảo để tới, tàu tự giữ độ cao và lượn quanh khi tới nơi. Khi đang tự lái mà ở trên tàu, góc phải luôn có **bảng tự lái**: kéo thanh trượt chỉnh độ cao (0 = chạy trên mặt nước như thuyền) và tốc độ, bấm để đổi đích hoặc dừng.
   - Dừng tự lái.
 - **Võng** (bấm E):
   - Ngủ trưa: tua nhanh khoảng 2 tiếng.
@@ -121,6 +122,7 @@ Mỗi hệ thống có 1 object cấu hình ở đầu file. Phần lớn chỉn
 | Speed lines | `SPEED_LINES` | `engine/render/SpeedLines.ts` |
 | Sợi gió | `WIND_FX` | `engine/fx/WindFX.ts` |
 | Vệt khí sau tàu (độ dài, bề rộng, độ đậm, tốc độ hiện) | `TRAIL_FX` | `engine/fx/Trail.ts` |
+| Bọt, gợn sóng, tia nước trên mặt biển | `WAKE_FX` | `engine/fx/Wake.ts` |
 | Cỏ (tắt mặc định) | `GRASS` | `engine/terrain/Grass.ts` |
 | Camera góc 3 (tàu / người) | `THIRD_PERSON` / `CHARACTER_CAMERA` | `engine/camera/CameraRig.ts` |
 | Dáng đi, chạy, bơi của nhân vật | `CHARACTER_ANIM` | `engine/character/Character.ts` |
@@ -148,6 +150,7 @@ src/
     terrain/              Terrain (đảo từ hàm độ cao), Grass (cỏ Ghibli instanced)
     fx/WindFX.ts          sợi gió Wind Waker
     fx/Trail.ts           vệt khí kéo sau 1 điểm neo (mép khí cầu, đầu cánh…), rõ dần theo tốc độ
+    fx/Wake.ts            bọt / gợn sóng / tia nước trên mặt biển (thuyền, vật rơi xuống nước)
     render/               LampLights (đèn giả lập bằng shader, chỉ sáng về đêm), PostFX (HDR + MSAA + bloom), SpeedLines, toon (cel-shading)
     audio/Ambience.ts     tiếng gió + chuông bằng WebAudio
     ui/                   SettingsPanel (lil-gui, tự lưu), Toast

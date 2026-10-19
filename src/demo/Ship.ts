@@ -5,7 +5,7 @@
 // game tìm các node theo tên để cử động: wheel (bánh lái), needle (kim la bàn), prop_L / prop_R (cánh quạt),
 // flag_dome / flag_bow (cờ), eye_helm (mắt người lái ở góc 1).
 import * as THREE from 'three';
-import type { LoadedModel } from '../engine';
+import { waterLevelNow, type LoadedModel } from '../engine';
 import { Input } from '../engine/core/Input';
 import { damp, wrapAngle } from '../engine/core/math';
 
@@ -27,8 +27,13 @@ export const THROTTLE = [
   { label: 'Hết ga', speed: 45 },
 ];
 
-export const MIN_ALT = 14;   // sát mặt biển
 export const MAX_ALT = 1100;
+/** Thân tàu sâu bao nhiêu dưới boong (m), theo model airship.glb. */
+export const HULL_DEPTH = 6.5;
+/** Tàu nổi trên nước thì đáy thân chìm bao sâu (m). */
+export const DRAFT = 1.6;
+/** Độ cao boong khi tàu nổi trên mặt nước (so với mực nước): thấp nhất tàu hạ được. */
+export const FLOAT_HEIGHT = HULL_DEPTH - DRAFT;
 
 export class Ship {
   readonly rig = new THREE.Group();
@@ -93,8 +98,14 @@ export class Ship {
     return this.forward(out).multiplyScalar(this.speed).setY(this.vy);
   }
 
-  /** control: lệnh từ tự lái (steer -1..1 trái/phải, lift -1..1 xuống/lên) thay cho bàn phím. */
-  update(dt: number, input: Input, controlsLocked: boolean, control?: { steer: number; lift: number }): void {
+  /** Đang nổi trên mặt nước (đáy thân chạm nước). */
+  floating = false;
+
+  /**
+   * control: lệnh từ tự lái thay cho bàn phím: steer -1..1 (trái/phải), lift -1..1 (xuống/lên),
+   * speed (m/s, tuỳ chọn) thay cho nấc ga.
+   */
+  update(dt: number, input: Input, controlsLocked: boolean, control?: { steer: number; lift: number; speed?: number }): void {
     this.t += dt;
 
     if (!controlsLocked) {
@@ -105,7 +116,7 @@ export class Ship {
     const liftIn = control ? control.lift : controlsLocked ? 0 : (input.isDown('Space') ? 1 : 0) - (input.isDown('ShiftLeft', 'ShiftRight', 'ControlLeft') ? 1 : 0);
 
     // Quán tính nặng nề của tàu bay
-    this.speed = damp(this.speed, THROTTLE[this.throttle].speed, 0.5, dt);
+    this.speed = damp(this.speed, control?.speed ?? THROTTLE[this.throttle].speed, 0.5, dt);
     this.steer = damp(this.steer, steerIn, 2.2, dt);
     this.vy = damp(this.vy, liftIn * 14, 1.4, dt);
 
@@ -113,13 +124,19 @@ export class Ship {
     this.yaw += turnRate * dt;
 
     this.rig.position.addScaledVector(this.forward(), this.speed * dt);
-    this.rig.position.y = THREE.MathUtils.clamp(this.rig.position.y + this.vy * dt, MIN_ALT, MAX_ALT);
+    // thấp nhất: nổi trên mặt nước, bồng bềnh theo sóng
+    const floor = waterLevelNow() + FLOAT_HEIGHT;
+    // đang nổi mà không kéo lên: bám theo mặt nước (lên xuống theo sóng) thay vì lơ lửng khi sóng hạ
+    if (this.floating && liftIn <= 0) this.rig.position.y = floor;
+    this.rig.position.y = THREE.MathUtils.clamp(this.rig.position.y + this.vy * dt, floor, MAX_ALT);
+    this.floating = this.rig.position.y <= floor + 0.05;
+    if (this.floating && this.vy < 0) this.vy = 0;
     this.rig.rotation.y = this.yaw;
 
     // Nghiêng khi rẽ, ngóc mũi khi lên, bồng bềnh nhẹ
     const sp = Math.min(1, Math.abs(this.speed) / 15);
     this.body.rotation.z = this.steer * 0.09 * sp + Math.sin(this.t * 0.55) * 0.012;
-    this.body.rotation.x = this.vy * 0.006 + Math.sin(this.t * 0.8) * 0.008;
+    this.body.rotation.x = this.vy * 0.006 + Math.sin(this.t * 0.8) * (this.floating ? 0.016 : 0.008);
     this.body.position.y = Math.sin(this.t * 0.7) * 0.18;
 
     // Bánh lái, cờ, cánh quạt

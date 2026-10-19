@@ -10,10 +10,12 @@
 import * as THREE from 'three';
 import './style.css';
 import {
-  CameraRig, CHARACTER_CAMERA, CharacterController, Input, loadCharacter, loadModel, SKY, THIRD_PERSON, Trail, TRAIL_FX, World,
+  CameraRig, CHARACTER_CAMERA, CharacterController, Input, loadCharacter, loadModel, SKY, THIRD_PERSON, Trail, TRAIL_FX, WAKE_FX, World,
   type CameraProfile, type SeaIslandDef,
 } from '../engine';
-import { Autopilot, AUTOPILOT, DESTINATIONS } from './Autopilot';
+import { Autopilot, AUTOPILOT, AUTOPILOT_MAX_ALT, AUTOPILOT_MAX_SPEED, DESTINATIONS } from './Autopilot';
+import { AutopilotPanel } from './AutopilotPanel';
+import { SHIP_WATER, ShipWater } from './ShipWater';
 import { Hud, type HudMode } from './Hud';
 import { animateSantorini, buildSantorini, santoriniHeight } from './Santorini';
 import { Ship } from './Ship';
@@ -58,6 +60,8 @@ ship.throttle = 1; // "Dừng"
 const autopilot = new Autopilot();
 const trails: Trail[] = [];
 const trailTint = new THREE.Color();
+// Sóng nước khi tàu hạ xuống chạm mặt biển (vệt chữ V, bọt, tia nước, gợn tròn)
+const shipWater = new ShipWater(world, ship);
 let deck: ShipDeck | null = null;
 
 // Model tàu từ Blender: đèn lồng (nhãn Phát sáng + Chiếu sáng) tự thành đèn ban đêm.
@@ -112,6 +116,13 @@ cam.profile = CHARACTER_CAMERA;
 const input = new Input(world.renderer.domElement);
 const hud = new Hud(document.getElementById('hud')!);
 const toast = (m: string) => world.toast.show(m);
+const engage = (d: (typeof DESTINATIONS)[number] | null) => {
+  autopilot.engage(ship, d);
+  toast(d ? `Tự lái → ${d.name}. Đi dạo, ngắm cảnh hay ngủ một giấc nhé` : 'Tự lái · giữ hướng hiện tại');
+};
+const stopAutopilot = () => { autopilot.stop(); ship.throttle = 1; toast('Đã dừng tự lái'); };
+// Bảng tự lái (độ cao, tốc độ, đích): luôn hiện khi tự lái mà nhân vật đang ở trên tàu
+const apPanel = new AutopilotPanel(document.getElementById('hud')!, autopilot, ship, stopAutopilot, engage);
 
 // ---------- lên / xuống tàu ----------
 function tryBoard(): void {
@@ -179,14 +190,14 @@ function openHelmMenu(spot: DeckSpot): void {
     { label: 'Lái tay (Manual)', run: () => takeHelm(spot) },
     { label: 'Tự lái (Auto) · chọn đích', run: () => openDestinationMenu() },
   ];
-  if (autopilot.active) items.push({ label: 'Dừng tự lái', run: () => { autopilot.stop(); ship.throttle = 1; toast('Đã dừng tự lái'); } });
+  if (autopilot.active) items.push({ label: 'Dừng tự lái', run: stopAutopilot });
   hud.openMenu('Bánh lái', items);
 }
 
 function openDestinationMenu(): void {
   hud.openMenu('Tự lái tới đâu?', [
-    ...DESTINATIONS.map((d) => ({ label: d.name, run: () => { autopilot.engage(ship, d); toast(`Tự lái → ${d.name}. Đi dạo, ngắm cảnh hay ngủ một giấc nhé`); } })),
-    { label: 'Giữ hướng hiện tại', run: () => { autopilot.engage(ship, null); toast('Tự lái · giữ hướng hiện tại'); } },
+    ...DESTINATIONS.map((d) => ({ label: d.name, run: () => engage(d) })),
+    { label: 'Giữ hướng hiện tại', run: () => engage(null) },
   ]);
 }
 
@@ -258,11 +269,25 @@ world.panel?.section('Vệt khí 2 bên tàu', 'TRAIL_FX', TRAIL_FX, (f) => {
   f.add(TRAIL_FX, 'core', 0, 1, 0.01).name('Lõi sáng');
 });
 world.panel?.section('Tự lái', 'AUTOPILOT', AUTOPILOT, (f) => {
-  f.add(AUTOPILOT, 'cruiseThrottle', 2, 5, 1).name('Nấc ga khi bay xa');
-  f.add(AUTOPILOT, 'orbitThrottle', 1, 4, 1).name('Nấc ga khi lượn quanh đích');
-  f.add(AUTOPILOT, 'minAltitude', 20, 600, 5).name('Độ cao thấp nhất (m)');
+  f.add(AUTOPILOT, 'altitude', 0, AUTOPILOT_MAX_ALT, 5).name('Độ cao (m, 0 = mặt nước)').listen();
+  f.add(AUTOPILOT, 'speed', 2, AUTOPILOT_MAX_SPEED, 1).name('Tốc độ (m/s)').listen();
+  f.add(AUTOPILOT, 'approachSpeed', 2, AUTOPILOT_MAX_SPEED, 1).name('Tốc độ khi gần tới');
+  f.add(AUTOPILOT, 'orbitSpeed', 2, AUTOPILOT_MAX_SPEED, 1).name('Tốc độ khi lượn quanh đích');
   f.add(AUTOPILOT, 'clearance', 10, 300, 5).name('Cao hơn địa hình (m)');
   f.add(AUTOPILOT, 'orbitExtra', 50, 800, 10).name('Lượn cách mép đảo (m)');
+});
+world.panel?.section('Sóng nước sau tàu', 'SHIP_WATER', SHIP_WATER, (f) => {
+  f.add(SHIP_WATER, 'foam', 0, 3, 0.05).name('Độ dày vệt bọt');
+  f.add(SHIP_WATER, 'spray', 0, 3, 0.05).name('Tia nước ở mũi');
+  f.add(SHIP_WATER, 'bowSpread', 0, 0.6, 0.01).name('Độ mở chữ V');
+  f.add(SHIP_WATER, 'ripples').name('Gợn tròn khi đứng yên');
+});
+world.panel?.section('Bọt / tia nước (engine)', 'WAKE_FX', WAKE_FX, (f) => {
+  f.add(WAKE_FX, 'foamLife', 1, 12, 0.1).name('Bọt tồn tại (giây)');
+  f.add(WAKE_FX, 'ringLife', 1, 10, 0.1).name('Gợn tròn (giây)');
+  f.add(WAKE_FX, 'opacity', 0, 1, 0.01).name('Độ đậm');
+  f.add(WAKE_FX, 'breakup', 0, 1.5, 0.01).name('Bọt vỡ lỗ chỗ');
+  f.add(WAKE_FX, 'drag', 0.05, 2, 0.01).name('Bọt trôi chậm dần');
 });
 world.panel?.section('Camera góc 3', 'THIRD_PERSON', THIRD_PERSON, (f) => {
   f.add(THIRD_PERSON, 'distance', 10, 200, 1).name('Khoảng cách (m)');
@@ -398,6 +423,8 @@ function frame(): void {
   // vệt khí: ban đêm mờ và ngả màu trời như sợi gió
   trailTint.copy(world.env.c.cloudLit).multiplyScalar(0.35 + 0.65 * world.env.dayFactor);
   for (const t of trails) { t.setTint(trailTint); t.update(dt, cam.camera, ship.speed); }
+  shipWater.update(dt, cam.camera, world.renderer.domElement.height, trailTint);
+  apPanel.update(autopilot.active && !!hero?.platform && activity !== 'sleep');
   ship.setLamp(1 - world.env.dayFactor);
   ship.pointNeedle(autopilot.active && autopilot.dest
     ? Math.atan2(autopilot.dest.x - ship.position.x, -(autopilot.dest.z - ship.position.z)) : null, dt);
@@ -411,7 +438,7 @@ function frame(): void {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     game: {
-      world, ship, cam, autopilot, hud,
+      world, ship, cam, autopilot, hud, shipWater, apPanel,
       get deck() { return deck; }, get airship() { return airship; },
       get hero() { return hero; }, get sample() { return sampleModel; }, get activity() { return activity; },
       tryBoard, jumpOff, interact, takeHelm, wakeUp,

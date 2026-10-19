@@ -21,7 +21,7 @@ export { VolumetricClouds, VOLUME } from './clouds/VolumetricClouds';
 export { CLOUD_GEN } from './clouds/gpuNoise';
 export { PaintedClouds } from './clouds/PaintedClouds';
 
-export { Ocean, SEA_LEVEL, WATER } from './water/Ocean';
+export { Ocean, SEA_LEVEL, WATER, waterLevelNow } from './water/Ocean';
 export { applyShoreline } from './water/shoreline';
 
 export { Terrain } from './terrain/Terrain';
@@ -30,6 +30,7 @@ export { Grass, GRASS } from './terrain/Grass';
 
 export { WindFX, WIND_FX } from './fx/WindFX';
 export { Trail, TRAIL_FX } from './fx/Trail';
+export { Wake, WAKE_FX } from './fx/Wake';
 export { BLOOM, PostFX } from './render/PostFX';
 export { applyLampLight, LAMP_FX, LampLights, MAX_LAMPS } from './render/LampLights';
 export type { Lamp, LampOptions } from './render/LampLights';

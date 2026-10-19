@@ -147,6 +147,7 @@ Thứ tự render (trong `World.render` và `PostFX`): mây volumetric (nửa đ
   }, /* mở sẵn */ false);
   ```
   Bảng chỉ lưu giá trị số, chuỗi, bool vào localStorage với khoá `${appId}-${tenobject}`. Vector3 và mảng không được lưu.
+- **Hiệu ứng nước** (`engine/fx/Wake.ts`): `wake.foam(x, z, vx, vz, r0, r1)` mảng bọt, `wake.ring(x, z, r0, r1)` gợn tròn, `wake.spray(pos, vel, size)` tia nước; mỗi frame `wake.update(dt, camera, viewportHeight)`. Hạt nằm theo `waterLevelNow()` (mực nước nhấp nhô, export từ `water/Ocean.ts`). Ví dụ chọn chỗ sinh hạt theo thân tàu: `src/demo/ShipWater.ts`. Vẽ sau mặt nước (`renderOrder` > 2), đừng hạ xuống.
 - **Pass hậu kỳ mới:** viết dạng `ShaderPass`, chèn bằng `PostFX.insertAfterScene` hoặc `insertBeforeOutput`. Mẫu: `engine/render/SpeedLines.ts`.
 - **Đảo trên biển:** thêm 1 dòng `{ x, z, radius, height, seed }` vào `islands` của `World`.
 

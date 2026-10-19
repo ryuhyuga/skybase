@@ -57,6 +57,11 @@ export const waterShared = {
   uShoreFadeEnd: { value: 300 },
 };
 
+/** Mực nước lúc này (mặt biển nhấp nhô lên xuống theo sóng). Dùng cho vật nổi, nhân vật bơi, hiệu ứng trên mặt nước. */
+export function waterLevelNow(): number {
+  return SEA_LEVEL + Math.sin(waterShared.uTime.value * waterShared.uWaveSpeed.value) * waterShared.uWaveAmplitude.value;
+}
+
 // Simplex noise 2D (Ashima / Stefan Gustavson), y như shader gốc
 const SNOISE = /* glsl */ `
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
