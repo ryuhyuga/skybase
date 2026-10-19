@@ -1,7 +1,7 @@
-schema_version = "1.0.0"
+schema_version = "1.1.0"
 
 id = "skybase_tools"
-version = "1.0.0"
+version = "1.1.0"
 name = "Skybase Tools"
 tagline = "Gan nhan, kiem tra va xuat model .glb cho engine Skybase"
 maintainer = "ChowNgo"

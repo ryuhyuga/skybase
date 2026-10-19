@@ -49,6 +49,11 @@ world.scene.add(ship.rig);
 ship.position.set(244, 16, 4);
 ship.throttle = 1; // "Dừng"
 const deck = buildDeck(ship);
+// Đèn lồng ở cột mũi: ban đêm chiếu sáng ấm lên boong, lan can, nhân vật và mặt nước (giả lập bằng shader)
+const bowLamp = new THREE.Object3D();
+bowLamp.position.set(0, 2.1, -8.4);
+ship.body.add(bowLamp);
+world.lamps.add(bowLamp, { color: 0xffb04a, range: 14, intensity: 1.4, flicker: 0.12 });
 const autopilot = new Autopilot();
 
 // Vệt khí 2 bên tàu: neo ở mép khí cầu (vệt chính) và 2 bên mạn thuyền (vệt phụ, mảnh hơn).

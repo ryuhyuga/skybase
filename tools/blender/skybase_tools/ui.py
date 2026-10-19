@@ -56,6 +56,9 @@ class SKYBASE_PT_tags(_Base, bpy.types.Panel):
             sub.prop(t, "glow_use_material")
             if not t.glow_use_material:
                 sub.prop(t, "glow_color")
+            sub.prop(t, "cast_light")
+            if t.cast_light:
+                sub.prop(t, "light_range")
         lay.operator("skybase.copy_tags", icon="COPYDOWN")
 
 

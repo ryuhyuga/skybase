@@ -9,6 +9,7 @@ import { PaintedClouds } from './clouds/PaintedClouds';
 import { VOLUME, VolumetricClouds } from './clouds/VolumetricClouds';
 import type { Input } from './core/Input';
 import { WIND_FX, WindFX } from './fx/WindFX';
+import { LAMP_FX, LampLights } from './render/LampLights';
 import { BLOOM, PostFX } from './render/PostFX';
 import { SPEED_LINES, SpeedLines } from './render/SpeedLines';
 import { Environment, SKY } from './sky/Environment';
@@ -63,6 +64,8 @@ export class World {
   readonly wind: WindFX;
   readonly speedLines: SpeedLines;
   readonly audio = new Ambience();
+  /** Đèn giả lập bằng shader, chỉ sáng về đêm: world.lamps.add(object, { color, range }). */
+  readonly lamps: LampLights;
   readonly toast: Toast;
   readonly panel: SettingsPanel | null;
   /** Mật độ mây tại camera (0..1), cập nhật trong update(). */
@@ -90,6 +93,7 @@ export class World {
     this.wind = new WindFX(this.scene);
     this.volume = new VolumetricClouds(this.renderer, zones, el.clientWidth, el.clientHeight);
     this.speedLines = new SpeedLines();
+    this.lamps = new LampLights(this.scene);
     this.toast = new Toast();
     this.panel = opts.panel === false ? null : new SettingsPanel(opts.appId ?? 'skybase', (m) => this.toast.show(m));
     if (this.panel) addDefaultSections(this.panel, this);
@@ -139,6 +143,7 @@ export class World {
     env.update(dt, camPos);
     this.cloudAtCamera = this.volume.enabled ? this.volume.densityAt(camPos) * 0.6 : this.painted.update(dt, camPos, env);
     this.ocean.update(dt, camPos, env);
+    this.lamps.update(dt, camPos, env.dayFactor);
     this.grass?.update(dt, camPos, env);
     // Sợi gió ban đêm mờ và ngả màu trời, không trắng chói
     this.wind.setTint(env.c.cloudLit.clone().multiplyScalar(0.35 + 0.65 * env.dayFactor));
@@ -243,6 +248,16 @@ function addDefaultSections(p: SettingsPanel, world: World): void {
     f.add(BLOOM, 'threshold', 0, 1.5, 0.01).name('Ngưỡng (thấp = nhiều thứ toả)');
     f.add(BLOOM, 'nightBoost', 0, 2, 0.01).name('Tăng thêm ban đêm');
     f.add(BLOOM, 'nightThresholdDrop', 0, 1, 0.01).name('Hạ ngưỡng ban đêm');
+  });
+
+  p.section('Đèn (ban đêm)', 'LAMP_FX', LAMP_FX, (f) => {
+    f.add(LAMP_FX, 'enabled').name('Bật');
+    f.add(LAMP_FX, 'maxLights', 0, 8, 1).name('Số đèn chiếu cùng lúc');
+    f.add(LAMP_FX, 'intensity', 0, 4, 0.05).name('Độ sáng');
+    f.add(LAMP_FX, 'maxDistance', 20, 800, 10).name('Tắt khi xa camera (m)');
+    f.add(LAMP_FX, 'dayCutoff', 0.05, 1, 0.01).name('Tắt khi trời sáng hơn');
+    f.add(LAMP_FX, 'flicker', 0, 3, 0.05).name('Lập loè');
+    f.add(LAMP_FX, 'softness', 0, 1, 0.01).name('Độ mềm vùng sáng');
   });
 
   p.section('Gió (Wind Waker)', 'WIND_FX', WIND_FX, (f) => {

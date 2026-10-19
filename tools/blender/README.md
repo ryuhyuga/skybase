@@ -7,7 +7,7 @@ Chạy trên Blender 4.2 trở lên, đã thử trên **Blender 5.2**.
 ## Cài
 
 1. Blender → **Edit → Preferences → Get Extensions**.
-2. Bấm mũi tên ⌄ góc trên phải → **Install from Disk…** → chọn `skybase_tools-1.0.0.zip`.
+2. Bấm mũi tên ⌄ góc trên phải → **Install from Disk…** → chọn `skybase_tools-1.1.0.zip`.
 3. Ở khung 3D bấm phím **N**, mở tab **Skybase**.
 
 Sửa code add-on xong thì nén lại các file trong `skybase_tools/` (nén các file, không nén cả folder) rồi cài lại.
@@ -36,6 +36,7 @@ Sửa code add-on xong thì nén lại các file trong `skybase_tools/` (nén c�
    - **Che mây:** mây không vẽ đè lên vật (mặc định bật).
    - **Va chạm:** game nhận hộp va chạm của vật, dùng `model.hit(pos, r)`.
    - **Phát sáng:** đèn, cửa sổ tự sáng và có bloom; chỉnh được độ sáng và màu.
+   - **Chiếu sáng ban đêm** (hiện khi tick Phát sáng): ban đêm vật này rọi sáng ra boong, tường, người, mặt nước xung quanh trong bán kính **Tầm chiếu**.
 3. **Tô màu palette.** Chọn màu từ bảng màu của game (tường kem, mái xanh, cát, cỏ…) → **Tô màu**. Model dùng chung vật liệu nên nhẹ hơn.
 4. **Xem toon** để thấy gần giống trong game (cel-shading 3 mảng). **Tắt** để trở lại vật liệu gốc. Bật hay tắt đều không ảnh hưởng file xuất.
 5. **Kiểm tra & xuất:**

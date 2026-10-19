@@ -92,14 +92,19 @@ Thứ tự render (trong `World.render` và `PostFX`): mây volumetric (nửa đ
    - Khi bật mây volumetric, đừng giả lập thêm "sương trong mây". Mây đã tự tạo sương thật, cộng thêm sẽ phủ trắng cả cảnh.
    - `World.update` tự điều khiển `scene.fog`, game không ghi đè.
 8. **Bloom:** chỉ vùng sáng hơn `BLOOM.threshold` (≈0.93, màu linear) mới toả sáng. Muốn đèn hay cửa sổ toả sáng thì đặt `emissive` và `emissiveIntensity > 1`, đừng hạ ngưỡng toàn cục.
-9. **Sợi gió:** bể cấp sẵn 32 sợi (`MAX_WISPS`), `WIND_FX.wisps` chỉ giới hạn số sợi bay cùng lúc.
-10. **Hiệu năng:** mây volumetric là phần nặng nhất. Theo thứ tự ưu tiên:
+9. **Đèn ban đêm** (`engine/render/LampLights.ts`): không dùng `PointLight`.
+   - `World` tự vá mọi vật liệu Toon / Standard / Lambert / Phong trong scene, quét mỗi giây. Phần vá chèn `lampLight()` trước `#include <opaque_fragment>`.
+   - `applyLampLight` phải chạy **sau** các bản vá khác: nó chụp lại `customProgramCacheKey` cũ rồi nối thêm `|lamp`. Muốn vá shader mới cho một vật liệu đã nhận đèn thì làm trước khi vật liệu đó vào scene.
+   - Tối đa `MAX_LAMPS = 8` đèn trong shader. `LAMP_FX.maxLights` chọn số đèn gần camera nhất được bật.
+   - ShaderMaterial tự viết sẽ không nhận đèn.
+10. **Sợi gió:** bể cấp sẵn 32 sợi (`MAX_WISPS`), `WIND_FX.wisps` chỉ giới hạn số sợi bay cùng lúc.
+11. **Hiệu năng:** mây volumetric là phần nặng nhất. Theo thứ tự ưu tiên:
     - hạ `VOLUME.resolutionScale` (0.35–0.5);
     - tăng `stepGrowth` / `maxStep`;
     - giảm `lightSteps`;
     - hạ `CLOUD_GEN.resolution` xuống 128 cho khởi động nhanh (noise được bake trên GPU lúc khởi động).
     Phím C đổi sang mây vẽ cọ, nhẹ hơn nhiều.
-11. **Đổi camera:** `World.setCamera` dựng lại hậu kỳ khi nhận camera khác. Dùng **một** `PerspectiveCamera` cố định rồi đổi vị trí, đừng tạo camera mới mỗi frame.
+12. **Đổi camera:** `World.setCamera` dựng lại hậu kỳ khi nhận camera khác. Dùng **một** `PerspectiveCamera` cố định rồi đổi vị trí, đừng tạo camera mới mỗi frame.
 
 ## Thêm thứ thường gặp
 
@@ -120,11 +125,11 @@ Thứ tự render (trong `World.render` và `PostFX`): mây volumetric (nửa đ
   - **Ví dụ gameplay trên tàu:** `src/demo/main.ts` (vòng trạng thái free/helm/pose/nap/sleep), `ShipDeck.ts`, `Autopilot.ts`.
 
 - **Nhân vật hoặc phương tiện bám camera:** cho object khớp interface `CameraTarget` (`position`, `yaw`, `speed`, `eye`, `body`; xem `demo/Ship.ts`), rồi gọi `cam.update(dt, target, input)`. Game không cần camera này thì truyền `PerspectiveCamera` riêng vào `world.update`.
-- **Model `.glb` từ Blender:** dùng add-on `tools/blender/` (xem README trong đó). Load bằng `loadModel(world, 'models/x.glb', { position })` (`engine/assets/loadModel.ts`). Hàm này đọc nhãn glTF extras (`sb_role`, `sb_toon`, `sb_clouds`, `sb_collide`, `sb_glow`, `sb_glow_color`) và tự làm:
+- **Model `.glb` từ Blender:** dùng add-on `tools/blender/` (xem README trong đó). Load bằng `loadModel(world, 'models/x.glb', { position })` (`engine/assets/loadModel.ts`). Hàm này đọc nhãn glTF extras (`sb_role`, `sb_toon`, `sb_clouds`, `sb_collide`, `sb_glow`, `sb_glow_color`, `sb_light`) và tự làm:
   - đổi vật liệu sang toon;
   - bật layer 1;
   - với địa hình: gọi `applyShoreline` và đăng ký độ cao;
-  - với vật phát sáng: đặt emissive;
+  - với vật phát sáng: đặt emissive, và nếu có `sb_light` thì đăng ký đèn ban đêm với `world.lamps`;
   - trả về `markers`, `colliders`, `hit()`, `heightAt`.
   Đừng tự viết lại `GLTFLoader` thủ công, trừ khi model không đến từ add-on (khi đó tự làm đủ: tỉ lệ mét, toon, layer 1, shoreline/heightSource). **Add-on và `loadModel` dùng chung định dạng nhãn**, đổi bên này phải đổi bên kia.
 - **Thông số mới cho bảng G:**

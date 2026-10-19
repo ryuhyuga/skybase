@@ -4,6 +4,7 @@
 //   sb_clouds  1 = che mây volumetric (layer 1)
 //   sb_collide 1 = có hộp va chạm (model.colliders / model.hit())
 //   sb_glow    độ sáng phát sáng (bloom), sb_glow_color '#rrggbb' (không có = màu vật liệu)
+//   sb_light   tầm chiếu sáng ban đêm (m) quanh vật phát sáng, 0 = không chiếu
 // Địa hình (terrain): có bờ cát ướt + bọt sóng (applyShoreline) và đăng ký độ cao để tàu/camera không xuyên qua.
 // Model không có nhãn (xuất bằng cách khác) vẫn load được: coi như 'prop', toon, che mây.
 //
@@ -14,6 +15,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { gradientMap } from '../render/toon';
+import type { Lamp } from '../render/LampLights';
 import type { HeightFn } from '../terrain/Terrain';
 import { applyShoreline } from '../water/shoreline';
 import type { World } from '../World';
@@ -37,11 +39,13 @@ export interface LoadedModel {
   colliders: THREE.Box3[];
   /** Điểm (bán kính r) có chạm hộp va chạm nào không. */
   hit(point: THREE.Vector3, radius?: number): boolean;
+  /** Đèn (vật có nhãn Phát sáng + Chiếu sáng) đã đăng ký với world.lamps. */
+  lamps: Lamp[];
   /** Độ cao địa hình của model tại (x, z); không có địa hình thì luôn rất âm. */
   heightAt: HeightFn;
 }
 
-interface Tags { role: string; toon: boolean; clouds: boolean; collide: boolean; glow: number; glowColor: string | null }
+interface Tags { role: string; toon: boolean; clouds: boolean; collide: boolean; glow: number; glowColor: string | null; light: number }
 
 const loader = new GLTFLoader();
 const NO_GROUND = -1e9;
@@ -58,6 +62,8 @@ function tagsOf(o: THREE.Object3D): Tags {
     collide: !!u.sb_collide,
     glow: Number(u.sb_glow ?? 0),
     glowColor: typeof u.sb_glow_color === 'string' ? u.sb_glow_color : null,
+    // tầm chiếu sáng ban đêm (m); file cũ không có nhãn này: vật phát sáng tự chiếu 8 m
+    light: u.sb_light !== undefined ? Number(u.sb_light) : Number(u.sb_glow ?? 0) > 0 ? 8 : 0,
   };
 }
 
@@ -65,7 +71,7 @@ const toonCache = new Map<string, THREE.Material>();
 
 /** Đổi 1 vật liệu bất kỳ (glTF standard / unlit) sang toon của engine. Dùng cho model không qua add-on. */
 export function toToon(src: THREE.Material, glow = 0): THREE.Material {
-  return convertMaterial(src, { role: 'prop', toon: true, clouds: true, collide: false, glow, glowColor: null }, false);
+  return convertMaterial(src, { role: 'prop', toon: true, clouds: true, collide: false, glow, glowColor: null, light: 0 }, false);
 }
 
 function convertMaterial(src: THREE.Material, t: Tags, terrain: boolean): THREE.Material {
@@ -163,6 +169,10 @@ export async function loadModel(world: World, url: string, opts: LoadModelOption
   const markers = new Map<string, THREE.Object3D>();
   const colliders: THREE.Box3[] = [];
   const terrainMeshes: THREE.Mesh[] = [];
+  const lamps: Lamp[] = [];
+  const lit = new Set<THREE.Object3D>();
+  // vật trong Blender có thể bị glTF tách thành nhóm + nhiều mesh con: gom về object mang nhãn
+  const lightOwner = (o: THREE.Object3D) => { let p: THREE.Object3D | null = o; while (p && p.userData.sb_role === undefined) p = p.parent; return p ?? o; };
 
   root.traverse((o) => {
     const t = tagsOf(o);
@@ -180,6 +190,14 @@ export async function loadModel(world: World, url: string, opts: LoadModelOption
     if (t.clouds) mesh.layers.enable(1);
     if (terrain) terrainMeshes.push(mesh);
     if (t.collide) colliders.push(new THREE.Box3().setFromObject(mesh));
+    if (t.light > 0 && t.glow > 0 && !lit.has(lightOwner(mesh))) {
+      // đèn: chiếu sáng ban đêm từ tâm vật (1 đèn cho mỗi vật, kể cả khi mesh bị tách theo vật liệu)
+      lit.add(lightOwner(mesh));
+      mesh.geometry.computeBoundingBox();
+      const c = mesh.geometry.boundingBox!.getCenter(new THREE.Vector3());
+      const col = t.glowColor ? new THREE.Color(t.glowColor) : ((mesh.material as THREE.MeshToonMaterial).color?.clone() ?? new THREE.Color(0xffb04a));
+      lamps.push(world.lamps.add(mesh, { color: col, range: t.light, intensity: 1.2 + t.glow * 0.25, offset: c }));
+    }
   });
 
   const heightAt = buildHeightField(terrainMeshes);
@@ -188,7 +206,7 @@ export async function loadModel(world: World, url: string, opts: LoadModelOption
 
   const tmp = new THREE.Vector3();
   return {
-    root, markers, colliders, heightAt,
+    root, markers, colliders, heightAt, lamps,
     hit(point, radius = 0) {
       for (const b of colliders) if (b.distanceToPoint(tmp.copy(point)) <= radius) return true;
       return false;

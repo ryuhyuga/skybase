@@ -4,7 +4,8 @@ import bpy
 from .palette import PALETTE_BY_ID, hex_to_linear
 from .props import ROLE_ITEMS
 
-TAG_FIELDS = ("role", "toon", "block_clouds", "collider", "glow", "glow_strength", "glow_use_material", "glow_color")
+TAG_FIELDS = ("role", "toon", "block_clouds", "collider", "glow", "glow_strength", "glow_use_material", "glow_color",
+              "cast_light", "light_range")
 
 
 def palette_material(pid: str):

@@ -99,6 +99,7 @@ def make_lantern(context):
     lamp.location = (0.75, 0, 2.85)
     lamp.skybase.glow = True
     lamp.skybase.glow_strength = 3.0
+    lamp.skybase.light_range = 9.0
     lamp.skybase.collider = False
     return [post, lamp]
 

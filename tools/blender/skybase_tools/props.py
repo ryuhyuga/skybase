@@ -27,6 +27,10 @@ class SkybaseTags(bpy.types.PropertyGroup):
                                  description="> 1 thì bloom mới thấy rõ")
     glow_use_material: BoolProperty(name="Dùng màu vật liệu", default=True,
                                     description="Màu phát sáng = màu vật liệu; tắt để chọn màu riêng")
+    cast_light: BoolProperty(name="Chiếu sáng ban đêm", default=True,
+                             description="Ban đêm chiếu ánh sáng ra vật xung quanh (boong, tường, người, mặt nước)")
+    light_range: FloatProperty(name="Tầm chiếu (m)", default=8.0, min=0.5, soft_max=40.0,
+                               description="Ánh sáng tắt dần tới khoảng cách này")
     glow_color: FloatVectorProperty(name="Màu sáng", subtype="COLOR", size=3, min=0.0, max=1.0,
                                     default=(1.0, 0.64, 0.27))
 

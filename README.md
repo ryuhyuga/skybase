@@ -76,7 +76,13 @@ frame();
   - Ngủ tới sáng: tối dần, dậy lúc 7:00. Nếu tàu đang tự lái thì vẫn bay tiếp trong lúc ngủ.
 - **Ghế và 2 chỗ lan can** (bấm E): ngồi hoặc tựa để ngắm cảnh.
 
-**Model từ Blender:** cài add-on `tools/blender/skybase_tools-1.0.0.zip` (hướng dẫn trong `tools/blender/README.md`). Gắn nhãn, bấm Xuất, rồi trong game gọi `loadModel(world, 'models/ten.glb')`.
+**Đèn ban đêm:** `world.lamps.add(object, { color, range })`.
+- Ánh sáng giả lập bằng shader: vật xung quanh được rọi theo hướng mặt, mờ dần theo khoảng cách.
+- Ban ngày tự tắt.
+- Mặc định 4 đèn gần camera nhất chiếu cùng lúc, tối đa 8 (chỉnh trong bảng G → Đèn).
+- Vật có tick **Phát sáng** + **Chiếu sáng ban đêm** trong add-on Blender tự thành đèn.
+
+**Model từ Blender:** cài add-on `tools/blender/skybase_tools-1.1.0.zip` (hướng dẫn trong `tools/blender/README.md`). Gắn nhãn, bấm Xuất, rồi trong game gọi `loadModel(world, 'models/ten.glb')`.
 
 **Dev cùng AI:** `AGENTS.md` (mọi AI agent) và `CLAUDE.md` (Claude Code) ghi kiến trúc, quy ước và các bẫy đã gặp. AI mở folder này sẽ tự đọc.
 
@@ -109,6 +115,7 @@ Mỗi hệ thống có 1 object cấu hình ở đầu file. Phần lớn chỉn
 | Cách tạo khối mây (GPU, 256³) | `CLOUD_GEN` | `engine/clouds/gpuNoise.ts` |
 | Nước (màu, gradient, bọt, sóng, bờ) | `WATER` | `engine/water/Ocean.ts` |
 | Bloom | `BLOOM` | `engine/render/PostFX.ts` |
+| Đèn ban đêm (số đèn cùng lúc, độ sáng, lập loè) | `LAMP_FX` | `engine/render/LampLights.ts` |
 | Speed lines | `SPEED_LINES` | `engine/render/SpeedLines.ts` |
 | Sợi gió | `WIND_FX` | `engine/fx/WindFX.ts` |
 | Vệt khí sau tàu (độ dài, bề rộng, độ đậm, tốc độ hiện) | `TRAIL_FX` | `engine/fx/Trail.ts` |
@@ -139,7 +146,7 @@ src/
     terrain/              Terrain (đảo từ hàm độ cao), Grass (cỏ Ghibli instanced)
     fx/WindFX.ts          sợi gió Wind Waker
     fx/Trail.ts           vệt khí kéo sau 1 điểm neo (mép khí cầu, đầu cánh…), rõ dần theo tốc độ
-    render/               PostFX (HDR + MSAA + bloom), SpeedLines, toon (cel-shading)
+    render/               LampLights (đèn giả lập bằng shader, chỉ sáng về đêm), PostFX (HDR + MSAA + bloom), SpeedLines, toon (cel-shading)
     audio/Ambience.ts     tiếng gió + chuông bằng WebAudio
     ui/                   SettingsPanel (lil-gui, tự lưu), Toast
     character/            Character (nhân vật ghép khối + animation thủ tục), CharacterController (đi, chạy, nhảy, bơi)

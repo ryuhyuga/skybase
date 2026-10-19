@@ -6,7 +6,7 @@ import bpy
 
 from .checks import export_objects, run_checks, store_issues
 
-EXTRA_KEYS = ("sb_role", "sb_toon", "sb_clouds", "sb_collide", "sb_glow", "sb_glow_color")
+EXTRA_KEYS = ("sb_role", "sb_toon", "sb_clouds", "sb_collide", "sb_glow", "sb_glow_color", "sb_light")
 
 
 def _hex(c) -> str:
@@ -34,6 +34,7 @@ def write_extras(o):
         o["sb_glow"] = float(t.glow_strength)
         if not t.glow_use_material:
             o["sb_glow_color"] = _hex(t.glow_color)
+        o["sb_light"] = float(t.light_range) if t.cast_light else 0.0
 
 
 def safe_name(s: str) -> str:

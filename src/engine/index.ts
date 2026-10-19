@@ -31,6 +31,8 @@ export { Grass, GRASS } from './terrain/Grass';
 export { WindFX, WIND_FX } from './fx/WindFX';
 export { Trail, TRAIL_FX } from './fx/Trail';
 export { BLOOM, PostFX } from './render/PostFX';
+export { applyLampLight, LAMP_FX, LampLights, MAX_LAMPS } from './render/LampLights';
+export type { Lamp, LampOptions } from './render/LampLights';
 export { SpeedLines, SPEED_LINES } from './render/SpeedLines';
 export { gradientMap, toon } from './render/toon';
 
