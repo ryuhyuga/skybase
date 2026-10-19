@@ -81,6 +81,7 @@ export class CharacterController {
       get speed() { return self.speed; },
       get eye() { return self.character.eye; },
       get body() { return self.character.body; },
+      get frameYaw() { return self.platform ? self.platformYaw() : 0; },
     };
   }
 

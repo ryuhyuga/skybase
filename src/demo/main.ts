@@ -46,7 +46,9 @@ world.terrain.addHeightSource(santoriniHeight);
 const sample = loadModel(world, 'models/sample.glb', { position: new THREE.Vector3(230, 0, -60) });
 
 // Tàu bay dài ~43 m (gấp 3 tàu cũ): camera góc 3 lùi xa hơn cho vừa khung hình
-Object.assign(THIRD_PERSON, { distance: 62, minDistance: 30, maxDistance: 260, height: 6, lookAhead: 25 });
+Object.assign(THIRD_PERSON, { distance: 62, minDistance: 30, maxDistance: 260, height: 6, lookAhead: 25, idleReturn: 0 });
+// Camera nhân vật: đứng yên sau lưng, không tự xoay theo người; kéo chuột tới đâu giữ nguyên tới đó. H = về sau lưng.
+Object.assign(CHARACTER_CAMERA, { followRate: 0, idleReturn: 0 });
 
 const ship = new Ship();
 world.scene.add(ship.rig);
@@ -231,6 +233,7 @@ function interact(spot: DeckSpot): void {
 function wakeUp(): void {
   if (activity === 'nap') world.env.timeScale = savedTimeScale;
   cam.autoOrbit = 0;
+  cam.reset(); // camera đã lượn khi ngủ: về lại sau lưng
   if (cam.mode !== savedCamMode) cam.toggle();
   hud.night(0);
   hud.zzz(false, 0);
@@ -287,7 +290,8 @@ function frame(): void {
   elapsed += dt;
 
   world.handleKeys(input); // C mây · G bảng chỉnh · B bloom · M tiếng · [ ] thời gian
-  if (input.wasPressed('KeyH')) hud.toggleHelp();
+  if (input.wasPressed('F1')) hud.toggleHelp();
+  if (input.wasPressed('KeyH') && !hud.menuOpen) { cam.reset(); toast('Camera về mặc định'); }
 
   // ---- menu (chặn mọi phím khác khi đang mở) ----
   if (hud.menuOpen) {

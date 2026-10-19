@@ -49,8 +49,8 @@ export class Hud {
       <div class="zzz">Z z z</div>
       <div class="panel menu"></div>
       <div class="panel help"><div class="keys"></div>
-        Kéo chuột: xoay camera · cuộn: zoom · <kbd>V</kbd> đổi camera<br>
-        <kbd>G</kbd> bảng chỉnh hình ảnh · <kbd>C</kbd> kiểu mây · <kbd>B</kbd> bloom · <kbd>[</kbd> <kbd>]</kbd> thời gian · <kbd>M</kbd> tiếng · <kbd>H</kbd> ẩn
+        Kéo chuột: xoay camera · cuộn: zoom · <kbd>H</kbd> camera về sau lưng · <kbd>V</kbd> đổi camera<br>
+        <kbd>G</kbd> bảng chỉnh hình ảnh · <kbd>C</kbd> kiểu mây · <kbd>B</kbd> bloom · <kbd>[</kbd> <kbd>]</kbd> thời gian · <kbd>M</kbd> tiếng · <kbd>F1</kbd> ẩn
       </div>
       <div class="night"></div>
       <div class="splash"><div class="card"><h1>Skybase</h1><p>Bấm phím bất kỳ để bắt đầu</p></div></div>`;

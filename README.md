@@ -101,7 +101,8 @@ Demo thêm các phím riêng:
 - **Đi bộ:** W/A/S/D đi, Shift chạy, Space nhảy, Q vẫy tay.
 - **Trên boong:** E dùng bánh lái, võng, ghế, lan can; phím số chọn trong menu; Esc đóng menu.
 - **Trên tàu:** W/S ga, A/D lái, Space/Shift lên xuống.
-- **Chung:** F lên tàu / nhảy khỏi tàu, V đổi camera, H ẩn hướng dẫn.
+- **Chung:** F lên tàu / nhảy khỏi tàu, V đổi camera, H camera về sau lưng, F1 ẩn hướng dẫn.
+- **Camera:** mặc định đứng sau lưng nhân vật và không tự xoay. Kéo chuột xoay tới đâu thì giữ nguyên tới đó (tàu rẽ thì camera xoay theo tàu). Bấm H để về lại sau lưng.
 
 ## Chỉnh ở đâu
 

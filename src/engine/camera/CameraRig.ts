@@ -1,7 +1,8 @@
 // Camera: góc 3 (mặc định, nhìn xa và rộng) hoặc góc 1 (trong buồng lái). Phím V để đổi.
 // - Góc 3: bám sau tàu, trễ nhẹ khi rẽ; kéo chuột để xoay quanh tàu, cuộn chuột để zoom.
 // - Góc 1: mắt người lái; kéo chuột để nhìn quanh.
-// Thả chuột một lúc thì camera tự về lại vị trí mặc định.
+// Thả chuột một lúc thì camera tự về lại vị trí mặc định (profile.idleReturn giây; 0 = giữ nguyên góc đã kéo).
+// cam.reset() đưa camera về mặc định (sau lưng vật đang bám) bất cứ lúc nào.
 import * as THREE from 'three';
 import { Input } from '../core/Input';
 import { damp, wrapAngle } from '../core/math';
@@ -20,6 +21,11 @@ export interface CameraTarget {
   readonly eye: THREE.Object3D;
   /** Phần thân có nghiêng/lắc; góc 1 lấy hướng nhìn từ đây. */
   readonly body: THREE.Object3D;
+  /**
+   * Hướng của sàn đang đứng (boong tàu…), radian. Có thì camera xoay theo sàn,
+   * nên góc nhìn so với sàn giữ nguyên khi tàu rẽ (kể cả khi followRate = 0).
+   */
+  readonly frameYaw?: number;
 }
 
 /** Chỉnh cảm giác camera góc 3 ở đây. */
@@ -38,6 +44,7 @@ export const THIRD_PERSON = {
   minHeight: 4,       // camera không thấp hơn mặt biển + mức này (và mặt đất + mức này)
   near: 2,            // mặt phẳng gần ở góc 3 (lớn = ít z-fighting ở xa; nhân vật nhỏ cần nhỏ hơn)
   firstFov: 72,       // FOV góc 1
+  idleReturn: 3,      // thả chuột bao nhiêu giây thì camera tự về góc mặc định (0 = không tự về, giữ góc đã kéo)
 };
 
 export type CameraProfile = typeof THIRD_PERSON;
@@ -47,7 +54,7 @@ export const CHARACTER_CAMERA: CameraProfile = {
   distance: 7.5, minDistance: 2.5, maxDistance: 30,
   pitch: 0.32, height: 1.5, lookAhead: 2.5, lookUp: 0.6,
   fov: 60, fovSpeedBoost: 4, fullSpeed: 7,
-  followRate: 0.8, minHeight: 0.6, near: 0.15, firstFov: 75,
+  followRate: 0.8, minHeight: 0.6, near: 0.15, firstFov: 75, idleReturn: 3,
 };
 
 export class CameraRig {
@@ -72,6 +79,8 @@ export class CameraRig {
   private idle = 0;
   private pos = new THREE.Vector3();
   private first = true;
+  private resetYaw = false;
+  private lastFrame = 0;
 
   private tmpV = new THREE.Vector3();
   private tmpQ = new THREE.Quaternion();
@@ -90,6 +99,14 @@ export class CameraRig {
   /** Đặt camera ngay vào vị trí (khi dịch chuyển tàu, load save). */
   snap(): void {
     this.first = true;
+  }
+
+  /** Về góc mặc định: sau lưng vật đang bám, góc nghiêng và khoảng cách mặc định của profile. Chuyển mượt, không giật. */
+  reset(): void {
+    this.orbitYaw = this.orbitPitch = this.fpYaw = this.fpPitch = 0;
+    this.distTarget = this.profile.distance;
+    this.idle = 0;
+    this.resetYaw = true;
   }
 
   toggle(): CamMode {
@@ -114,7 +131,8 @@ export class CameraRig {
       this.idle = 0;
     } else if (!input.dragging) {
       this.idle += dt;
-      if (this.idle > 3) {
+      const back = this.profile.idleReturn;
+      if (back > 0 && this.idle > back) {
         this.orbitYaw = damp(this.orbitYaw, 0, 1.2, dt);
         this.orbitPitch = damp(this.orbitPitch, 0, 1.2, dt);
         this.fpYaw = damp(this.fpYaw, 0, 1.5, dt);
@@ -124,10 +142,10 @@ export class CameraRig {
     const P = this.profile;
     this.lastYaw = ship.yaw;
     if (P !== this.lastProfile) {
-      // đổi profile: về khoảng cách mặc định của profile mới
-      this.dist = this.distTarget = P.distance;
+      // đổi profile: trượt dần về khoảng cách mặc định của profile mới, giữ nguyên hướng nhìn (không giật)
+      if (!this.lastProfile) this.dist = P.distance;
+      this.distTarget = P.distance;
       this.lastProfile = P;
-      this.first = true;
     }
     if (input.wheel) {
       this.distTarget = THREE.MathUtils.clamp(this.distTarget * (input.wheel > 0 ? 1.12 : 0.89), P.minDistance, P.maxDistance);
@@ -146,7 +164,11 @@ export class CameraRig {
     }
 
     // Góc 3: hướng camera trễ nhẹ sau hướng tàu
-    if (this.first) this.camYaw = ship.yaw;
+    const frame = ship.frameYaw ?? 0;
+    if (this.first || this.resetYaw) this.camYaw = ship.yaw;
+    else this.camYaw += wrapAngle(frame - this.lastFrame); // sàn (boong tàu) xoay thì camera xoay theo
+    this.lastFrame = frame;
+    this.resetYaw = false;
     this.camYaw += wrapAngle(ship.yaw - this.camYaw) * (1 - Math.exp(-P.followRate * dt));
     this.dist = damp(this.dist, this.distTarget, 5, dt);
 

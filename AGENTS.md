@@ -64,7 +64,7 @@ Thứ tự render (trong `World.render` và `PostFX`): mây volumetric (nửa đ
 - **Màu:** hex sRGB trong `engine/sky/palette.ts`. `ATMOSPHERE` là các mốc màu theo độ cao mặt trời, engine tự nội suy giữa các mốc. `COLORS` là màu vật thể. Renderer dùng `NoToneMapping` để giữ đúng màu palette, đừng bật ACES/Filmic.
 - **Phong cách vật liệu:** cel-shading. Dùng `toon(color)` hoặc `MeshToonMaterial` với `gradientMap()` (`engine/render/toon.ts`). Vật liệu PBR thường trông lệch tông.
 - **Bàn phím:** dùng `KeyboardEvent.code` (`'KeyW'`, `'Space'`...) qua `Input.isDown` và `Input.wasPressed`. **Không dùng `e.key`**, vì bộ gõ tiếng Việt (Unikey) làm sai `key`.
-- **Phím đã dùng:** `World.handleKeys` dùng C, G, B, M, `[`, `]`. `CharacterController` dùng W/A/S/D, Shift, Space, Q. Demo dùng thêm E (tương tác), 1–9 + Esc (menu), V, H, F (lên tàu / nhảy khỏi tàu). Tránh trùng.
+- **Phím đã dùng:** `World.handleKeys` dùng C, G, B, M, `[`, `]`. `CharacterController` dùng W/A/S/D, Shift, Space, Q. Demo dùng thêm E (tương tác), 1–9 + Esc (menu), V (đổi camera), H (camera về mặc định), F1 (ẩn hướng dẫn), F (lên tàu / nhảy khỏi tàu). Tránh trùng.
 - **Comment và chuỗi giao diện:** viết bằng tiếng Việt, giữ đúng phong cách sẵn có.
 
 ## Bẫy đã gặp (đọc kỹ)
@@ -122,7 +122,9 @@ Thứ tự render (trong `World.render` và `PostFX`): mây volumetric (nửa đ
     - `leavePlatform()` để rời sàn.
     - Camera phải nhận `controller.cameraTarget`, vì `controller.position` là toạ độ cục bộ khi đang trên sàn.
   - **Tư thế:** `controller.setPose('sit' | 'lie' | 'lean' | 'helm', at, yaw)`, `setPose(null, standAt)` để đứng dậy. Game tự đặt chỗ.
-  - **Camera:** `cam.autoOrbit` (radian/giây) cho camera tự lượn khi ngủ hoặc cắt cảnh.
+  - **Camera:** `cam.autoOrbit` (radian/giây) cho camera tự lượn khi ngủ hoặc cắt cảnh. `cam.reset()` về góc mặc định (sau lưng).
+    - `profile.followRate = 0`: camera không tự xoay theo hướng nhân vật. `profile.idleReturn` (giây, 0 = không bao giờ): thả chuột bao lâu thì tự về góc mặc định. Demo đặt cả hai về 0.
+    - `CameraTarget.frameYaw` (controller.cameraTarget tự có khi đứng trên sàn): camera xoay theo sàn, nên góc nhìn so với boong giữ nguyên khi tàu rẽ.
   - **Ví dụ gameplay trên tàu:** `src/demo/main.ts` (vòng trạng thái free/helm/pose/nap/sleep), `ShipDeck.ts`, `Autopilot.ts`.
 - **Tàu bay demo** là model `public/models/airship.glb`, sinh bằng script `tools/blender/models/build_airship.py` (file sửa tay: `airship.blend`). Muốn đổi hình tàu thì sửa script rồi chạy lại (lệnh ở đầu file), hoặc sửa `.blend` rồi xuất bằng add-on. Game dựa vào các quy ước sau, đổi model phải giữ:
   - tên node cử động: `wheel`, `needle`, `prop_L`, `prop_R`, `flag_dome`, `flag_bow`;

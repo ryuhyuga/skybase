@@ -12,7 +12,7 @@ export class Input {
       // Đang gõ trong ô nhập (bảng chỉnh) thì không điều khiển tàu
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
-      if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+      if (e.code === 'Space' || e.code === 'F1' || e.code.startsWith('Arrow')) e.preventDefault(); // F1: không mở trợ giúp của trình duyệt
       if (!e.repeat) this.pressed.add(e.code);
       this.down.add(e.code);
     });
