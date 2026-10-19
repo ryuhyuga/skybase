@@ -64,6 +64,18 @@ island.hit(ship.position, 6); // chạm vật có tick Va chạm?
 
 Xem ví dụ trong `src/demo/main.ts`. File `public/models/sample.glb` được xuất bằng chính add-on này từ các vật mẫu.
 
+## Tàu bay mẫu
+
+`models/airship.blend` là tàu bay của demo (2 tầng, buồng lái, bếp, khoang hàng, kho). Mở ra sửa rồi bấm **Xuất sang game** (tên file `airship`).
+
+File này được sinh bởi `models/build_airship.py`. Dựng lại từ đầu (ghi đè cả `.blend` lẫn `.glb`):
+
+```
+blender --background --python tools/blender/models/build_airship.py -- <thư mục game>
+```
+
+Giữ nguyên tên các node và điểm mốc mà game dùng (xem phần "Tàu bay demo" trong `AGENTS.md`).
+
 ## Quy ước
 
 - **1 đơn vị = 1 m.** Dùng thước người 1.8 m để so.

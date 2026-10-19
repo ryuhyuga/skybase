@@ -1,5 +1,7 @@
 // DEMO: cách dùng engine.
 // Nhân vật đi bộ trên đảo mẫu (model từ Blender). Lại gần tàu bấm F để lên boong, đi lại trên boong như trên đất.
+// Tàu (models/airship.glb) có 2 tầng: boong với buồng lái + bếp, cầu thang xuống khoang hàng + kho.
+// Vào trong phòng hoặc xuống tầng dưới thì camera nhìn từ trên xuống và cắt mái / boong đi.
 // Trên boong bấm E ở:
 //  - Bánh lái: 1 Lái tay (góc 3 / góc 1 như cũ) · 2 Tự lái tới đích đã chọn · 3 Dừng tự lái
 //  - Võng: 1 Ngủ trưa (tua nhanh ~2 giờ, nhìn trời) · 2 Ngủ tới sáng (tối dần, tỉnh dậy 7:00, tàu tự lái vẫn bay tiếp)
@@ -9,13 +11,13 @@ import * as THREE from 'three';
 import './style.css';
 import {
   CameraRig, CHARACTER_CAMERA, CharacterController, Input, loadCharacter, loadModel, SKY, THIRD_PERSON, Trail, TRAIL_FX, World,
-  type SeaIslandDef,
+  type CameraProfile, type SeaIslandDef,
 } from '../engine';
 import { Autopilot, AUTOPILOT, DESTINATIONS } from './Autopilot';
 import { Hud, type HudMode } from './Hud';
 import { animateSantorini, buildSantorini, santoriniHeight } from './Santorini';
 import { Ship } from './Ship';
-import { BOARD_POINT, buildDeck, type DeckSpot } from './ShipDeck';
+import { buildDeck, type DeckSpot, type DeckZone, type ShipDeck } from './ShipDeck';
 
 /** Đảo trên biển: thêm đảo = thêm 1 dòng. */
 const ISLANDS: SeaIslandDef[] = [
@@ -43,36 +45,42 @@ world.terrain.addHeightSource(santoriniHeight);
 // Nhãn đặt trong Blender (địa hình, phát sáng, va chạm, điểm mốc) được loadModel áp tự động.
 const sample = loadModel(world, 'models/sample.glb', { position: new THREE.Vector3(230, 0, -60) });
 
+// Tàu bay dài ~43 m (gấp 3 tàu cũ): camera góc 3 lùi xa hơn cho vừa khung hình
+Object.assign(THIRD_PERSON, { distance: 62, minDistance: 30, maxDistance: 260, height: 6, lookAhead: 25 });
+
 const ship = new Ship();
 world.scene.add(ship.rig);
 // Tàu đậu cạnh cầu cảng của đảo mẫu, mũi hướng Bắc
-ship.position.set(244, 16, 4);
+ship.position.set(262, 18, 10);
 ship.throttle = 1; // "Dừng"
-const deck = buildDeck(ship);
-// Đèn lồng ở cột mũi: ban đêm chiếu sáng ấm lên boong, lan can, nhân vật và mặt nước (giả lập bằng shader)
-const bowLamp = new THREE.Object3D();
-bowLamp.position.set(0, 2.1, -8.4);
-ship.body.add(bowLamp);
-world.lamps.add(bowLamp, { color: 0xffb04a, range: 14, intensity: 1.4, flicker: 0.12 });
 const autopilot = new Autopilot();
-
-// Vệt khí 2 bên tàu: neo ở mép khí cầu (vệt chính) và 2 bên mạn thuyền (vệt phụ, mảnh hơn).
-// Neo là con của ship.body nên nghiêng theo tàu khi rẽ.
 const trails: Trail[] = [];
-for (const side of [-1, 1]) {
-  const env = new THREE.Object3D();
-  env.position.set(side * 5.05, 10.3, -1.2); // mép rộng nhất của khí cầu
-  const hull = new THREE.Object3D();
-  hull.position.set(side * 1.95, -1.3, -3.5); // mạn thuyền
-  ship.body.add(env, hull);
-  trails.push(new Trail(world.scene, env), new Trail(world.scene, hull, { width: 0.55, opacity: 0.7 }));
-}
 const trailTint = new THREE.Color();
+let deck: ShipDeck | null = null;
+
+// Model tàu từ Blender: đèn lồng (nhãn Phát sáng + Chiếu sáng) tự thành đèn ban đêm.
+// Không thêm thẳng vào scene: gắn vào ship.body để đi theo tàu.
+const airship = loadModel(world, 'models/airship.glb', { addToScene: false, registerTerrain: false }).then((m) => {
+  ship.useModel(m);
+  deck = buildDeck(m, ship.body);
+  // Vệt khí neo ở mép vành cánh quạt (vệt chính) và đầu cánh đuôi (vệt phụ, mảnh hơn); nghiêng theo tàu khi rẽ
+  for (const n of ['trail_L', 'trail_R']) { const o = m.markers.get(n); if (o) trails.push(new Trail(world.scene, o)); }
+  for (const n of ['trail_wL', 'trail_wR']) { const o = m.markers.get(n); if (o) trails.push(new Trail(world.scene, o, { width: 0.55, opacity: 0.7 })); }
+  return m;
+});
+
+/** Camera trong phòng / tầng dưới: nhìn gần như thẳng từ trên xuống, mái đã được cắt. */
+const INDOOR_CAMERA: CameraProfile = {
+  ...CHARACTER_CAMERA,
+  distance: 10, minDistance: 5, maxDistance: 18, pitch: 1.12, height: 1.2, lookAhead: 0.5, lookUp: 0, followRate: 0, fov: 55,
+};
+const ZONE_NAME: Record<DeckZone, string> = { deck: 'đi dạo', wheelhouse: 'buồng lái', kitchen: 'bếp', lower: 'khoang dưới' };
+let zone: DeckZone | null | undefined; // undefined = cần tính lại (sau khi đứng dậy…)
 
 // Nhân vật ghép khối (public/models/character.glb): animation thủ tục theo từng bộ phận.
 // Xuất hiện trên cầu cảng của đảo mẫu, nhìn về phía Bắc (vào đảo).
 let hero: CharacterController | null = null;
-Promise.all([loadCharacter(world, 'models/character.glb', { height: 1.8 }), sample])
+Promise.all([loadCharacter(world, 'models/character.glb', { height: 1.8 }), sample, airship])
   .then(([c, m]) => {
     hero = new CharacterController(world, c, { colliders: m.colliders });
     const dock = m.markers.get('dock')?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(230, 2, 8);
@@ -80,7 +88,7 @@ Promise.all([loadCharacter(world, 'models/character.glb', { height: 1.8 }), samp
   })
   .catch((e) => console.warn('Không load được nhân vật hoặc đảo mẫu', e));
 
-const BOARD_DIST = 26; // m: lại gần tàu cỡ này (theo phương ngang) mới lên được
+const BOARD_DIST = 38; // m: lại gần tàu cỡ này (theo phương ngang) mới lên được
 const BOARD_HEIGHT = 30; // m: tàu cao hơn mức này so với người thì không với tới
 const NAP_HOURS = 2;
 const HOUR_SECONDS = () => SKY.dayLength / 24; // 1 giờ trong game = bao nhiêu giây thật
@@ -105,14 +113,14 @@ const toast = (m: string) => world.toast.show(m);
 
 // ---------- lên / xuống tàu ----------
 function tryBoard(): void {
-  if (!hero) return;
+  if (!hero || !deck) return;
   const hp = hero.getWorldPosition();
   const d = Math.hypot(hp.x - ship.position.x, hp.z - ship.position.z);
   if (d > BOARD_DIST) { toast(`Lại gần tàu hơn để lên (${Math.round(d)} m)`); return; }
   if (ship.position.y - hp.y > BOARD_HEIGHT) { toast('Tàu ở cao quá, không với tới'); return; }
-  hero.board(deck.platform, BOARD_POINT, 0);
+  hero.board(deck.platform, deck.boardPoint, 0);
   cam.snap();
-  toast('Lên tàu · E ở bánh lái để lái, ở võng để ngủ');
+  toast('Lên tàu · E ở bánh lái để lái, ở võng để ngủ · cầu thang bên phải xuống khoang hàng');
 }
 
 function jumpOff(): void {
@@ -125,9 +133,10 @@ function jumpOff(): void {
 
 // ---------- tương tác trên boong ----------
 function nearestSpot(): DeckSpot | null {
-  if (!hero?.platform) return null;
+  if (!hero?.platform || !deck) return null;
   let best: DeckSpot | null = null, bd = Infinity;
   for (const s of deck.spots) {
+    if (Math.abs(hero.position.y - s.at.y) > 1.5) continue; // khác tầng
     const d = Math.hypot(hero.position.x - s.at.x, hero.position.z - s.at.z);
     if (d < s.radius && d < bd) { best = s; bd = d; }
   }
@@ -137,11 +146,12 @@ function nearestSpot(): DeckSpot | null {
 function standUp(at?: THREE.Vector3): void {
   if (!hero) return;
   const s = activeSpot;
-  const stand = at ?? (s?.kind === 'hammock' ? new THREE.Vector3(0, 0, 0.45) : s?.kind === 'seat' ? new THREE.Vector3(0.55, 0, -4.2) : s?.at.clone());
+  const stand = at ?? s?.stand.clone();
   hero.setPose(null, stand);
   activity = 'free';
   activeSpot = null;
   cam.profile = CHARACTER_CAMERA;
+  zone = undefined;
 }
 
 function takeHelm(spot: DeckSpot): void {
@@ -156,7 +166,7 @@ function takeHelm(spot: DeckSpot): void {
 }
 
 function leaveHelm(): void {
-  standUp(new THREE.Vector3(0, 0, -0.85));
+  standUp(activeSpot?.at.clone().setY(0));
   ship.throttle = 1;
   cam.snap();
   toast('Rời bánh lái · tàu giảm tốc và dừng');
@@ -333,6 +343,14 @@ function frame(): void {
     else { wakeUp(); toast(autopilot.active ? `Chào buổi sáng! ${autopilot.status(ship)}` : 'Chào buổi sáng!'); }
   }
 
+  // ---- trong phòng / tầng dưới: cắt mái, camera nhìn từ trên ----
+  const newZone: DeckZone | null = hero?.platform && deck && activity !== 'helm' ? deck.zoneAt(hero.position) : null;
+  if (newZone !== zone) {
+    zone = newZone;
+    deck?.cutaway(zone === 'deck' ? null : zone);
+    if (activity === 'free' || activity === 'pose') cam.profile = zone && zone !== 'deck' ? INDOOR_CAMERA : CHARACTER_CAMERA;
+  }
+
   // ---- nhân vật + camera ----
   if (hero) {
     hero.locked = !started || hud.menuOpen || activity !== 'free';
@@ -362,7 +380,7 @@ function frame(): void {
   else if (!hero) lines = [clockText];
   else if (activity === 'nap' || activity === 'sleep') { mode = 'rest'; lines = [activity === 'nap' ? 'Đang ngủ trưa' : 'Đang ngủ', clockText]; }
   else if (activity === 'pose') { mode = 'rest'; lines = [activeSpot?.kind === 'seat' ? 'Đang ngồi ngắm cảnh' : 'Đang tựa lan can', `Độ cao tàu <b>${Math.round(ship.position.y)} m</b>`, clockText]; }
-  else if (hero.platform) { mode = 'deck'; lines = ['Trên tàu · đi dạo', `Độ cao tàu <b>${Math.round(ship.position.y)} m</b> · <b>${Math.round(ship.speed)} m/s</b>`, clockText]; }
+  else if (hero.platform) { mode = 'deck'; lines = [`Trên tàu · ${ZONE_NAME[zone ?? 'deck']}`, `Độ cao tàu <b>${Math.round(ship.position.y)} m</b> · <b>${Math.round(ship.speed)} m/s</b>`, clockText]; }
   else {
     const st = hero.swimming ? 'đang bơi' : !hero.grounded ? 'trên không' : hero.speed > 4 ? 'chạy' : hero.speed > 0.3 ? 'đi' : 'đứng';
     lines = [`Đi bộ · <b>${st}</b>`, `Tốc độ <b>${hero.speed.toFixed(1)} m/s</b>`, clockText];
@@ -389,7 +407,8 @@ function frame(): void {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     game: {
-      world, ship, cam, autopilot, deck, hud,
+      world, ship, cam, autopilot, hud,
+      get deck() { return deck; }, get airship() { return airship; },
       get hero() { return hero; }, get sample() { return sampleModel; }, get activity() { return activity; },
       tryBoard, jumpOff, interact, takeHelm, wakeUp,
     },

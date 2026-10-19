@@ -67,6 +67,7 @@ frame();
 
 **Demo:**
 - Bắt đầu bằng nhân vật đứng trên cầu cảng. Lại gần tàu bấm **F** để lên boong; trên boong bấm F để nhảy khỏi tàu.
+- **Tàu bay** dài ~43 m, 2 tầng: trên boong có buồng lái và bếp; cầu thang bên phải xuống khoang hàng và kho. Phòng có cửa ra vào và cửa sổ. Vào trong thì camera nhìn từ trên xuống, mái (hoặc cả boong) được cắt đi.
 - **Bánh lái** (bấm E):
   - Lái tay: góc 3 hoặc góc 1, bấm E để rời bánh lái.
   - Tự lái: chọn đảo để tới, tàu tự giữ độ cao và lượn quanh khi tới nơi.
@@ -153,12 +154,14 @@ src/
     assets/loadModel.ts   load .glb từ add-on Blender, tự áp nhãn (toon, bờ sóng, phát sáng, va chạm, điểm mốc)
   demo/                   VÍ DỤ — thay bằng game mới
     main.ts               dùng World + tàu bay + Santorini
-    Ship.ts, Cockpit.ts   tàu bay (khớp CameraTarget)
+    Ship.ts               tàu bay (khớp CameraTarget), hình là models/airship.glb
+    ShipDeck.ts           sàn đi được trên tàu: boong, cầu thang, khoang dưới, cắt mái khi vào trong
     Santorini.ts          đảo caldera tự dựng (ví dụ addHeightSource + applyShoreline)
     Hud.ts, style.css
 public/bluenoise.png      cho mây volumetric (từ leoawen, MIT)
-public/models/            model .glb (sample.glb = vật mẫu xuất từ add-on)
+public/models/            model .glb (sample.glb = vật mẫu, airship.glb = tàu bay, đều xuất từ add-on)
 tools/blender/            add-on Blender "Skybase Tools" + file .zip để cài
+  models/                 build_airship.py (script dựng tàu) + airship.blend
 ```
 
 Thứ tự render: mây volumetric (nửa độ phân giải) → scene → ghép mây → bloom → speed lines → màn hình.

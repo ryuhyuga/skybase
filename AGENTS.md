@@ -117,12 +117,18 @@ Thứ tự render (trong `World.render` và `PostFX`): mây volumetric (nửa đ
     - bị chặn bởi hộp cao và vách dốc;
     - nước sâu thì tự bơi (mực nước nhấp nhô theo `waterShared`).
   - **Sàn di chuyển** (boong tàu, bè, thang máy): `controller.board(platform, localPos)`.
-    - `Platform` gồm `object` (nhân vật thành con của nó), `floorAt(x, z)` (trả null ngoài mép, tức bị chặn) và `colliders`. Tất cả tính theo toạ độ của object.
+    - `Platform` gồm `object` (nhân vật thành con của nó), `floorAt(x, z, footY)` (trả null ngoài mép, tức bị chặn) và `colliders`. Tất cả tính theo toạ độ của object.
+    - Sàn nhiều tầng (boong + khoang dưới + cầu thang): `floorAt` dùng `footY` (độ cao chân) để trả tầng cao nhất không vượt quá `footY + bậc`. Ví dụ: `src/demo/ShipDeck.ts`.
     - `leavePlatform()` để rời sàn.
     - Camera phải nhận `controller.cameraTarget`, vì `controller.position` là toạ độ cục bộ khi đang trên sàn.
   - **Tư thế:** `controller.setPose('sit' | 'lie' | 'lean' | 'helm', at, yaw)`, `setPose(null, standAt)` để đứng dậy. Game tự đặt chỗ.
   - **Camera:** `cam.autoOrbit` (radian/giây) cho camera tự lượn khi ngủ hoặc cắt cảnh.
   - **Ví dụ gameplay trên tàu:** `src/demo/main.ts` (vòng trạng thái free/helm/pose/nap/sleep), `ShipDeck.ts`, `Autopilot.ts`.
+- **Tàu bay demo** là model `public/models/airship.glb`, sinh bằng script `tools/blender/models/build_airship.py` (file sửa tay: `airship.blend`). Muốn đổi hình tàu thì sửa script rồi chạy lại (lệnh ở đầu file), hoặc sửa `.blend` rồi xuất bằng add-on. Game dựa vào các quy ước sau, đổi model phải giữ:
+  - tên node cử động: `wheel`, `needle`, `prop_L`, `prop_R`, `flag_dome`, `flag_bow`;
+  - điểm mốc: `spot_*` (chỗ tương tác, thuộc tính `sb_yaw` = hướng), `stand_*` (chỗ đứng dậy), `board`, `eye_helm`, `trail_*`;
+  - thuộc tính `sb_hide` (`upper`, `roof_wheel`, `roof_kitchen`) để cắt mái khi nhân vật vào trong;
+  - scene extras `sb_layout` (JSON: mặt cắt thân, sàn tầng dưới, cầu thang, các phòng) mà `ShipDeck.ts` đọc để dựng sàn đi được.
 
 - **Nhân vật hoặc phương tiện bám camera:** cho object khớp interface `CameraTarget` (`position`, `yaw`, `speed`, `eye`, `body`; xem `demo/Ship.ts`), rồi gọi `cam.update(dt, target, input)`. Game không cần camera này thì truyền `PerspectiveCamera` riêng vào `world.update`.
 - **Model `.glb` từ Blender:** dùng add-on `tools/blender/` (xem README trong đó). Load bằng `loadModel(world, 'models/x.glb', { position })` (`engine/assets/loadModel.ts`). Hàm này đọc nhãn glTF extras (`sb_role`, `sb_toon`, `sb_clouds`, `sb_collide`, `sb_glow`, `sb_glow_color`, `sb_light`) và tự làm:

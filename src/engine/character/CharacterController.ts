@@ -35,8 +35,11 @@ export interface ControllerOptions {
 /** Vật nhân vật đứng lên được và di chuyển theo (boong tàu, thang máy, bè…). Toạ độ theo `object`. */
 export interface Platform {
   object: THREE.Object3D;
-  /** Độ cao sàn tại (x, z) theo toạ độ của object; null = ngoài sàn (bị chặn, vd. lan can). */
-  floorAt(x: number, z: number): number | null;
+  /**
+   * Độ cao sàn tại (x, z) theo toạ độ của object; null = ngoài sàn (bị chặn, vd. lan can).
+   * footY = độ cao chân hiện tại: sàn nhiều tầng (boong + khoang dưới) chọn tầng cao nhất không vượt footY + bậc.
+   */
+  floorAt(x: number, z: number, footY: number): number | null;
   /** Hộp va chạm theo toạ độ của object (cột, bánh lái, đồ đạc…). */
   colliders?: THREE.Box3[];
 }
@@ -117,7 +120,7 @@ export class CharacterController {
     this.platform = platform;
     platform.object.add(this.character.rig);
     this.position.copy(local);
-    this.position.y = Math.max(local.y, platform.floorAt(local.x, local.z) ?? local.y);
+    this.position.y = Math.max(local.y, platform.floorAt(local.x, local.z, local.y) ?? local.y);
     this.yaw = yaw;
     this.vel.set(0, 0);
     this.vy = 0;
@@ -155,7 +158,7 @@ export class CharacterController {
     let g: number;
     let boxes = this.colliders;
     if (this.platform) {
-      g = this.platform.floorAt(x, z) ?? -1e9;
+      g = this.platform.floorAt(x, z, footY) ?? -1e9;
       boxes = this.platform.colliders ?? [];
     } else {
       g = this.world.terrain.heightAt(x, z);
@@ -177,8 +180,8 @@ export class CharacterController {
     if (this.platform) {
       // ngoài mép sàn (lan can): chặn — kiểm tra cả thân người (bán kính) chứ không chỉ tâm
       const pf = this.platform;
-      return pf.floorAt(x, z) === null || pf.floorAt(x + r, z) === null || pf.floorAt(x - r, z) === null
-        || pf.floorAt(x, z + r) === null || pf.floorAt(x, z - r) === null;
+      const f = (fx: number, fz: number) => pf.floorAt(fx, fz, footY);
+      return f(x, z) === null || f(x + r, z) === null || f(x - r, z) === null || f(x, z + r) === null || f(x, z - r) === null;
     }
     // vách đất quá dốc
     const climb = M.stepHeight + (this.swimming ? h * 0.6 : 0); // từ dưới nước được trèo lên bờ cao hơn chút

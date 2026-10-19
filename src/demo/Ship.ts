@@ -1,10 +1,22 @@
 // Tàu bay: điều khiển nhẹ nhàng, có quán tính, nghiêng khi rẽ, bồng bềnh khi đứng yên.
 // rig = vị trí + hướng trong thế giới; body = nghiêng/lắc (chỉ là hình ảnh).
 // Camera không nằm ở đây: xem CameraRig (góc 1 dùng `eye`, góc 3 bám theo rig).
+// Hình tàu là model public/models/airship.glb (tools/blender/models/build_airship.py), gắn vào bằng useModel():
+// game tìm các node theo tên để cử động: wheel (bánh lái), needle (kim la bàn), prop_L / prop_R (cánh quạt),
+// flag_dome / flag_bow (cờ), eye_helm (mắt người lái ở góc 1).
 import * as THREE from 'three';
+import type { LoadedModel } from '../engine';
 import { Input } from '../engine/core/Input';
 import { damp, wrapAngle } from '../engine/core/math';
-import { buildCockpit, CockpitParts } from './Cockpit';
+
+/** Các bộ phận cử động được của tàu (Object3D rỗng nếu model thiếu node đó). */
+export interface ShipParts {
+  wheel: THREE.Object3D;
+  needle: THREE.Object3D;
+  props: THREE.Object3D[];
+  flags: THREE.Object3D[];
+  lamps: THREE.MeshToonMaterial[];
+}
 
 export const THROTTLE = [
   { label: 'Lùi', speed: -6 },
@@ -23,7 +35,7 @@ export class Ship {
   readonly body = new THREE.Group();
   /** Vị trí mắt người lái (góc nhìn thứ nhất). */
   readonly eye = new THREE.Object3D();
-  readonly parts: CockpitParts;
+  parts: ShipParts = { wheel: new THREE.Object3D(), needle: new THREE.Object3D(), props: [], flags: [], lamps: [] };
 
   yaw = 0;            // 0 = hướng Bắc (-Z)
   speed = 0;
@@ -34,12 +46,32 @@ export class Ship {
   private propSpin = 0;
 
   constructor() {
-    this.parts = buildCockpit();
-    this.eye.position.set(0, 2.25, 0.4);
-    this.body.add(this.parts.root, this.eye);
+    this.eye.position.set(0, 1.62, -1.7);
+    this.body.add(this.eye);
     this.rig.add(this.body);
     this.rig.rotation.order = 'YXZ';
     this.body.rotation.order = 'YXZ';
+  }
+
+  /** Gắn model tàu (load bằng loadModel với addToScene: false) vào thân tàu. */
+  useModel(model: LoadedModel): void {
+    this.body.add(model.root);
+    const find = (n: string) => model.root.getObjectByName(n) ?? model.markers.get(n);
+    const none = () => new THREE.Object3D();
+    const lamps = new Set<THREE.MeshToonMaterial>();
+    model.root.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.MeshToonMaterial | undefined;
+      if ((o as THREE.Mesh).isMesh && Number(o.userData.sb_glow ?? 0) > 0 && m?.emissive) lamps.add(m);
+    });
+    this.parts = {
+      wheel: find('wheel') ?? none(),
+      needle: find('needle') ?? none(),
+      props: ['prop_L', 'prop_R'].map(find).filter((o): o is THREE.Object3D => !!o),
+      flags: ['flag_dome', 'flag_bow'].map(find).filter((o): o is THREE.Object3D => !!o),
+      lamps: [...lamps],
+    };
+    const eye = model.markers.get('eye_helm');
+    if (eye) this.eye.position.copy(this.body.worldToLocal(eye.getWorldPosition(new THREE.Vector3())));
     this.rig.traverse((o) => o.layers.enable(1)); // để mây volumetric biết tàu che phía trước
   }
 
@@ -92,9 +124,9 @@ export class Ship {
 
     // Bánh lái, cờ, cánh quạt
     this.parts.wheel.rotation.z = this.steer * 2.6;
-    this.parts.flag.rotation.y = Math.sin(this.t * (2 + sp * 4)) * (0.15 + sp * 0.2) + 0.1;
+    for (const [i, f] of this.parts.flags.entries()) f.rotation.y = Math.sin(this.t * (2 + sp * 4) + i * 1.7) * (0.15 + sp * 0.2) + 0.1;
     this.propSpin += dt * (1.5 + this.speed * 0.6);
-    this.parts.propeller.rotation.z = this.propSpin;
+    for (const [i, p] of this.parts.props.entries()) p.rotation.z = i ? -this.propSpin : this.propSpin; // 2 bên quay ngược nhau
   }
 
   /** Kim la bàn chỉ về hướng (bearing, radian) mục tiêu. */
@@ -104,8 +136,9 @@ export class Ship {
     this.parts.needle.rotation.y = cur + wrapAngle(target - cur) * (1 - Math.exp(-4 * dt));
   }
 
+  /** Đèn trên tàu: ban ngày dịu, ban đêm sáng rõ (night 0..1). */
   setLamp(night: number): void {
-    this.parts.lamp.emissiveIntensity = 0.6 + night * 2.5;
+    for (const m of this.parts.lamps) m.emissiveIntensity = 0.6 + night * 2.6;
   }
 
   /** Chạm đảo: giảm tốc. */
